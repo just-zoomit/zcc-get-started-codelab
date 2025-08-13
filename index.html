@@ -1,0 +1,303 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Get started with Zoom Contact Center apps SDK</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14" ga4id=""></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  codelab-ga4id=""
+                  id="zccapps-sdk-nextjs-sample"
+                  title="Get started with Zoom Contact Center apps SDK"
+                  environment="web"
+                  feedback-link="https://devforum.zoom.us/c/zoom-apps">
+    
+      <google-codelab-step label="Before you begin" duration="0">
+        <p>This codelab guides you through building a Zoom Contact Center app with Next.js. The sample application serves as a boilerplate showing how to extend a web application into the Zoom client and integrate with various Zoom services. You&#39;ll learn to create a Zoom Marketplace app using the Zoom Manifest API and display your Contact Center application within the Zoom client. This tutorial also covers core concepts for creating engaging experiences in Zoom Workplace—including Zoom Contact Center Apps.</p>
+<p>⚠️ <strong>Warning:</strong> Some feature requires a paid plan.</p>
+<p>💡 <strong>Tip:</strong> If you don&#39;t have a paid workspace for development, you can join by signing up for a <a href="https://www.zoom.us/pricing" target="_blank">free Zoom account</a>, which provides access to all Zoom Developer platform features. To learn more about powering your service with Zoom, visit <a href="https://explore.zoom.us/en/investor-alliances" target="_blank">Zoom for Startups</a>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="What you&#39;ll learn" duration="0">
+        <p>✓ How to build a Zoom Contact Center app</p>
+<p>✓ How to implement secure API communication by configuring proper OAuth scopes and webhook endpoints.</p>
+<p>✓ How to manage manifest versioning to maintain your app&#39;s functionality during updates.</p>
+<h2 is-upgraded>What you&#39;ll Need</h2>
+<ul>
+<li>Git</li>
+<li>Node.js</li>
+<li>Zoom Account</li>
+</ul>
+<h2 is-upgraded>Prerequisites</h2>
+<ul>
+<li>A Zoom account with developer role permissions</li>
+<li>A development workspace with permissions to install apps</li>
+<li>Experience <a href="https://developers.zoom.us/docs/build-flow/create-oauth-apps/" target="_blank">creating apps</a> in the Zoom App Marketplace</li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Ngrok overview" duration="0">
+        <p>Ngrok is a tool that creates secure tunnels to your local development server, allowing you to expose your localhost to the internet over HTTPS. It&#39;s especially useful for testing webhooks, APIs, or any feature that requires a publicly accessible URL during development.</p>
+<p>In this tutorial, ngrok is used to serve the sample Zoom App over HTTPS. This is a requirement for all Zoom Apps, as they must be hosted on a secure (HTTPS) endpoint in order to be embedded within the Zoom client and interact with Zoom services.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Start ngrok endpoints" duration="0">
+        <p>Run:</p>
+<pre><code language="language-bash" class="language-bash">ngrok http 3000
+</code></pre>
+<p>Ngrok will output the origin it has created for your tunnel, eg https://9a20-38-99-100-7.ngrok.io. You should see the tunnel traffic:</p>
+<ul>
+<li><img alt="Start tunnel" src="img/78570a21dc3b533d.png"></li>
+</ul>
+<p><strong>Use your ngrok URL</strong></p>
+<p>After starting ngrok, you&#39;ll get a public HTTPS URL like <code>https://9a20-38-99-100-7.ngrok.io</code>. Use those origins for any Zoom Manifest or configuration that requires a secure URL.</p>
+<p>Replace any placeholder URL such as <code>https://example.ngrok.io</code> with your actual ngrok-generated URL.</p>
+<p>For example:</p>
+<pre><code language="language-json" class="language-json">&#34;https://example.ngrok.io&#34; → &#34;https://9a20-38-99-100-7.ngrok.io&#34;
+</code></pre>
+<p>Make sure to update all instances in your manifest file, environment variables, and redirect URIs accordingly.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="App manifests overview" duration="0">
+        <p>App manifests are JSON files that define the configuration of Zoom App Marketplace apps.</p>
+<h2 is-upgraded>Manifest schema</h2>
+<p>Manifests are JSON-formatted configuration files for Zoom Apps. You can use a manifest to create a general app via the Marketplace build flow or API, or to update the configuration of an existing general app. Manifests are portable, allowing you to share and reuse them across environments.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Create a Zoom General User-level OAuth app" duration="0">
+        <p>In this section, you will create a user-managed Zoom App Marketplace general app and configure it with Zoom App and Team Chatbot features.</p>
+<h2 is-upgraded>Create your App: How to Create and Configure a Zoom App (User-Managed) with the Manifest API</h2>
+<ol type="1">
+<li>Visit the Zoom App Marketplace<ul>
+<li>Navigate to the <a href="https://marketplace.zoom.us/" target="_blank">Zoom App Marketplace</a> and select General App.</li>
+</ul>
+</li>
+<li>Start Building a New App<ul>
+<li>Click the &#34;Develop&#34; dropdown in the top-right.</li>
+<li>Select &#34;Build App&#34;.</li>
+</ul>
+</li>
+<li>Choose App Type:<ul>
+<li>When prompted to choose an app type, select &#34;General App&#34; unless you have a specific use case.</li>
+<li>Click &#34;Create&#34;.</li>
+</ul>
+</li>
+<li>Choose App Management Type<ul>
+<li>Select User-managed App. This allows individual users to install and authorize your app to access their Zoom data — similar to apps accessing a user&#39;s Google Drive or Gmail</li>
+</ul>
+</li>
+<li>Configure Basic App Information<ul>
+<li>On the &#34;Basic Information&#34; page:</li>
+<li>Scroll down to the Redirect URL for OAuth section. For testing with Postman, add the Postman redirect URI:</li>
+</ul>
+</li>
+</ol>
+<pre><code language="language-bash" class="language-bash">https://oauth.pstmn.io/v1/callback
+
+</code></pre>
+<ol type="1" start="6">
+<li>Get App ID from URL: <img alt="App ID" src="img/5894b1561e50b78c.png"></li>
+<li>Make a PATCH request to update the app (test with Postman). After configuring the app, test it by sending a PATCH request to Zoom&#39;s API to update your app metadata or description.</li>
+</ol>
+<ul>
+<li><strong>Method:</strong> PATCH</li>
+<li><strong>URL:</strong> https://api.zoom.us/v2/marketplace/apps/&lt;APP_ID&gt;</li>
+<li><strong>Headers:</strong><ul>
+<li>Authorization: Bearer &lt;YOUR_ACCESS_TOKEN&gt;</li>
+<li>Content-Type: application/json</li>
+</ul>
+</li>
+<li><strong>Body:</strong></li>
+</ul>
+<p><strong>Example Postman setup:</strong></p>
+<p>Use the Ngrok output origins created for your tunnel, eg https://9a20-38-99-100-7.ngrok.io:</p>
+<pre><code language="language-javascript" class="language-javascript">{
+  &#34;manifest&#34;: {
+      &#34;display_information&#34;: {
+          &#34;display_name&#34;: &#34;ZCC-NextJS-Sample&#34;
+      },
+      &#34;oauth_information&#34;: {
+          &#34;usage&#34;: &#34;USER_OPERATION&#34;,
+          &#34;development_redirect_uri&#34;: &#34;https://oauth.pstmn.io/v1/callback&#34;,
+          &#34;production_redirect_uri&#34;: &#34;&#34;,
+          &#34;oauth_allow_list&#34;: [
+              &#34;https://oauth.pstmn.io/v1/callback&#34;
+          ],
+          &#34;strict_mode&#34;: false,
+          &#34;subdomain_strict_mode&#34;: false,
+          &#34;scopes&#34;: [
+              {
+                  &#34;scope&#34;: &#34;user:read:user&#34;,
+                  &#34;optional&#34;: false
+              },
+              {
+                  &#34;scope&#34;: &#34;marketplace:read:app&#34;,
+                  &#34;optional&#34;: false
+              },
+              {
+                  &#34;scope&#34;: &#34;marketplace:write:app&#34;,
+                  &#34;optional&#34;: false
+              }
+          ]
+      },
+      &#34;features&#34;: {
+          &#34;products&#34;: [
+              &#34;ZOOM_CONTACT_CENTER&#34;
+          ],
+          &#34;development_home_uri&#34;: &#34;Your.domain.ngrok.app&#34;,
+          &#34;production_home_uri&#34;: &#34;&#34;,
+          &#34;domain_allow_list&#34;: [
+              {
+                  &#34;domain&#34;: &#34;appssdk.zoom.us&#34;,
+                  &#34;explanation&#34;: &#34;&#34;
+              },
+              {
+                  &#34;domain&#34;: &#34;Your.domain.ngrok.app&#34;,
+                  &#34;explanation&#34;: &#34;&#34;
+              }
+          ],
+          &#34;in_client_feature&#34;: {
+              &#34;zoom_app_api&#34;: {
+                  &#34;enable&#34;: true,
+                  &#34;zoom_app_apis&#34;: [
+                      &#34;connect&#34;,
+                      &#34;getEngagementContext&#34;,
+                      &#34;getEngagementStatus&#34;,
+                      &#34;getRunningContext&#34;,
+                      &#34;getSupportedJsApis&#34;,
+                      &#34;getUserContext&#34;,
+                      &#34;onConnect&#34;,
+                      &#34;onEngagementContextChange&#34;,
+                      &#34;onEngagementMediaRedirect&#34;,
+                      &#34;onEngagementStatusChange&#34;,
+                      &#34;onEngagementVariableValueChange&#34;,
+                      &#34;onMyUserContextChange&#34;
+                  ]
+              },
+              &#34;guest_mode&#34;: {
+                  &#34;enable&#34;: false,
+                  &#34;enable_test_guest_mode&#34;: false
+              },
+              &#34;in_client_oauth&#34;: {
+                  &#34;enable&#34;: false
+              },
+              &#34;collaborate_mode&#34;: {
+                  &#34;enable&#34;: false,
+                  &#34;enable_screen_sharing&#34;: false,
+                  &#34;enable_play_together&#34;: false,
+                  &#34;enable_start_immediately&#34;: false,
+                  &#34;enable_join_immediately&#34;: false
+              }
+          },
+          &#34;zoom_client_support&#34;: {
+              &#34;mobile&#34;: {
+                  &#34;enable&#34;: false
+              },
+              &#34;zoom_room&#34;: {
+                  &#34;enable&#34;: false,
+                  &#34;enable_personal_zoom_room&#34;: false,
+                  &#34;enable_shared_zoom_room&#34;: false,
+                  &#34;enable_digital_signage&#34;: false,
+                  &#34;enable_zoom_rooms_controller&#34;: false
+              },
+              &#34;pwa_client&#34;: {
+                  &#34;enable&#34;: false
+              }
+          },
+          &#34;embed&#34;: {
+              &#34;meeting_sdk&#34;: {
+                  &#34;enable&#34;: false,
+                  &#34;enable_device&#34;: false,
+                  &#34;devices&#34;: []
+              },
+              &#34;contact_center_sdk&#34;: {
+                  &#34;enable&#34;: false
+              },
+              &#34;phone_sdk&#34;: {
+                  &#34;enable&#34;: false
+              }
+          },
+          &#34;team_chat_subscription&#34;: {
+              &#34;enable&#34;: false,
+              &#34;enable_support_channel&#34;: false,
+              &#34;shortcuts&#34;: []
+          },
+          &#34;event_subscription&#34;: {
+              &#34;enable&#34;: false,
+              &#34;events&#34;: []
+          }
+      }
+  }
+}
+</code></pre>
+<h2 is-upgraded>Resource:</h2>
+<ol type="1">
+<li><a href="https://developers.zoom.us/docs/api/marketplace/#tag/manifest/PUT/marketplace/apps/%7BappId%7D/manifest" target="_blank">Update an app by manifest API</a></li>
+</ol>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Zoom Contact Center apps overview" duration="0">
+        <p>Agents are internal team members who use ZCC to engage with external users. Depending on the workflow and environment, agents typically operate in the following contexts:</p>
+<p>Zoom Workplace App: For a native experience, agents use the Zoom Contact Center desktop interface. You can enhance this experience by building Zoom Contact Center Apps, which embed your custom web tools directly into the agent&#39;s call UI — enabling a seamless, &#34;single pane of glass&#34; workflow that reduces context-switching and boosts productivity.</p>
+<p>CRM Integration: Use the Zoom Contact Center API endpoints and events to integrate access to Contact Center features and data directly into your application. See the Zoom Contact Center Support page for further details on CRM integraton.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Build a Zoom Contact Center app" duration="0">
+        <h2 is-upgraded>Install Zoom App SDK</h2>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Next steps" duration="0">
+        <p>Congratulations! You have successfully built a multi-feature Zoom app using a manifest file.</p>
+<p>To continue learning and extend your app&#39;s capabilities, explore the following resources:</p>
+<h3 is-upgraded>Learn more</h3>
+<ul>
+<li><a href="https://developers.zoom.us/docs/contact-center/agents/" target="_blank">Contact Center Agents</a></li>
+<li><a href="https://developers.zoom.us/docs/api/" target="_blank">Zoom REST API reference</a></li>
+<li><a href="https://developers.zoom.us/docs/api/contact-center/" target="_blank">Zoom Contact Center API reference</a></li>
+</ul>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>

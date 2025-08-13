@@ -1,0 +1,25 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2025-08-13T18:10:13-04:00",
+  "id": "zccapps-sdk-nextjs-sample",
+  "duration": 0,
+  "title": "Get started with Zoom Contact Center apps SDK",
+  "authors": "Donte",
+  "summary": "Create a Zoom App Next.js boilerplate sample app",
+  "source": "00_create-zoomapps-sdk-nextjs-sample.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "sample"
+  ],
+  "tags": [
+    "medium"
+  ],
+  "feedback": "https://devforum.zoom.us/c/zoom-apps",
+  "url": "zccapps-sdk-nextjs-sample"
+}
