@@ -272,8 +272,318 @@
 
       </google-codelab-step>
     
+      <google-codelab-step label="Zoom Contact Center apps" duration="0">
+        <h2 is-upgraded>Account Setup</h2>
+<ol type="1">
+<li>Add User : <img alt="Start tunnel" src="img/d553fc3663832e1d.png"></li>
+<li>Add Queue: <img alt="Queue" src="img/48104ac1364c4827.png"></li>
+<li>Add Number: <img alt="Add Number" src="img/602c65a87918a641.png"></li>
+<li>Assign Number: <img alt="Assign Number" src="img/94a707dba408a652.png"></li>
+<li>Add Agent Profile (Optional): <img alt="Assign agent" src="img/a22ac33834d0ef8.png"></li>
+<li>Flow - Configure Queue: <img alt="Configure Queue" src="img/841ebaad9d5844e8.png"></li>
+<li>Integration: <img alt="Integration" src="img/8a944b40eaad81fd.png"></li>
+<li>Add Zoom Apps: <img alt="Add Zoom Apps" src="img/fb71b7e6a0ed0d44.png"></li>
+<li>Manage/Add Queues: <img alt="Integration" src="img/f169a8d85888d3cc.png"></li>
+</ol>
+
+
+      </google-codelab-step>
+    
       <google-codelab-step label="Build a Zoom Contact Center app" duration="0">
-        <h2 is-upgraded>Install Zoom App SDK</h2>
+        <h2 is-upgraded>Zoom Contact Center engagment compoment</h2>
+<p>Create oom Contact Center engagment compoment</p>
+<pre><code language="language-javascript" class="language-javascript">&#34;use client&#34;;
+
+import * as React from &#34;react&#34;;
+import { useCallback, useEffect, useMemo, useState } from &#34;react&#34;;
+
+import zoomSdk from &#34;@zoom/appssdk&#34;;
+
+import { Card, CardContent, CardHeader, CardTitle } from &#34;@/components/ui/card&#34;;
+import { Label } from &#34;@/components/ui/label&#34;;
+import { Textarea } from &#34;@/components/ui/textarea&#34;;
+import { Input } from &#34;@/components/ui/input&#34;;
+import { RadioGroup, RadioGroupItem } from &#34;@/components/ui/radio-group&#34;;
+import { Checkbox } from &#34;@/components/ui/checkbox&#34;;
+import { Slider } from &#34;@/components/ui/slider&#34;;
+
+type EngagementStatusState = &#34;start&#34; | &#34;hold&#34; | &#34;resume&#34; | &#34;end&#34; | string;
+
+type EngagementContextPayload = {
+  engagementContext: {
+    engagementId: string;
+    queueName?: string;
+  };
+};
+
+type EngagementStatusPayload = {
+  engagementStatus: {
+    state: EngagementStatusState;
+  };
+};
+
+type FormData = {
+  text: string;
+  date: string;
+  contactMethod: &#34;email&#34; | &#34;phone&#34; | &#34;&#34;;
+  interests: string[];
+  range: number;
+};
+
+const DEFAULT_FORM: FormData = {
+  text: &#34;&#34;,
+  date: &#34;&#34;,
+  contactMethod: &#34;&#34;,
+  interests: [],
+  range: 50,
+};
+
+const isBrowser = typeof window !== &#34;undefined&#34;;
+const storageKey = (id: string) =&gt; `zcc-engagement:${id}`;
+
+export default function Engagement() {
+  const [engagementId, setEngagementId] = useState&lt;string&gt;(&#34;&#34;);
+  const [engagementStatus, setEngagementStatus] = useState&lt;EngagementStatusState&gt;(&#34;&#34;);
+  const [engagementContext, setEngagementContext] = useState&lt;string&gt;(&#34;&#34;);
+  const [config, setConfig] = useState&lt;any&gt;(null);
+
+  // Configure SDK once, then fetch initial context/status
+  useEffect(() =&gt; {
+    let cancelled = false;
+
+    const init = async () =&gt; {
+      if (typeof zoomSdk?.config !== &#34;function&#34;) {
+        console.warn(&#34;zoomSdk not available (are you outside the Zoom embedded browser?)&#34;);
+        return;
+      }
+
+      const cfg = await zoomSdk.config({
+        capabilities: [
+          &#34;shareApp&#34;,
+          &#34;getEngagementContext&#34;,
+          &#34;getEngagementStatus&#34;,
+          &#34;onEngagementContextChange&#34;,
+          &#34;onEngagementMediaRedirect&#34;,
+          &#34;onEngagementStatusChange&#34;,
+          &#34;onEngagementVariableValueChange&#34;,
+        ],
+      });
+
+      if (cancelled) return;
+      setConfig(cfg);
+
+      const [ctx, status] = await Promise.all([
+        zoomSdk.callZoomApi(&#34;getEngagementContext&#34;) as Promise&lt;EngagementContextPayload&gt;,
+        zoomSdk.callZoomApi(&#34;getEngagementStatus&#34;) as Promise&lt;EngagementStatusPayload&gt;,
+      ]);
+
+      if (cancelled) return;
+      setEngagementId(ctx?.engagementContext?.engagementId ?? &#34;&#34;);
+      setEngagementContext(ctx?.engagementContext?.queueName ?? &#34;&#34;);
+      setEngagementStatus(status?.engagementStatus?.state ?? &#34;&#34;);
+    };
+
+    init().catch((e) =&gt; console.error(&#34;Zoom SDK init error:&#34;, e));
+    return () =&gt; {
+      cancelled = true;
+    };
+  }, []);
+
+  // Local storage
+  const initialForm = useMemo&lt;FormData&gt;(() =&gt; DEFAULT_FORM, []);
+  const [formData, setFormData] = useState&lt;FormData&gt;(initialForm);
+
+  const loadFromStorage = useCallback((id: string) =&gt; {
+    if (!isBrowser || !id) return DEFAULT_FORM;
+    try {
+      const raw = localStorage.getItem(storageKey(id));
+      if (!raw) return DEFAULT_FORM;
+      const parsed = JSON.parse(raw) as Partial&lt;FormData&gt;;
+      return {
+        text: parsed.text ?? &#34;&#34;,
+        date: parsed.date ?? &#34;&#34;,
+        contactMethod: (parsed.contactMethod as FormData[&#34;contactMethod&#34;]) ?? &#34;&#34;,
+        interests: Array.isArray(parsed.interests) ? parsed.interests : [],
+        range: typeof parsed.range === &#34;number&#34; ? parsed.range : 50,
+      } satisfies FormData;
+    } catch {
+      return DEFAULT_FORM;
+    }
+  }, []);
+
+  const persistToStorage = useCallback(
+    (id: string, patch: Partial&lt;FormData&gt;) =&gt; {
+      if (!isBrowser || !id) return;
+      try {
+        const current = loadFromStorage(id);
+        const next = { ...current, ...patch };
+        localStorage.setItem(storageKey(id), JSON.stringify(next));
+      } catch {
+        // no-op
+      }
+    },
+    [loadFromStorage]
+  );
+
+  const handleChange = useCallback(
+    &lt;K extends keyof FormData&gt;(field: K, value: FormData[K]) =&gt; {
+      setFormData((prev) =&gt; {
+        const next = { ...prev, [field]: value };
+        if (engagementId) persistToStorage(engagementId, { [field]: value } as Partial&lt;FormData&gt;);
+        return next;
+      });
+    },
+    [engagementId, persistToStorage]
+  );
+
+  const handleCheckboxToggle = useCallback(
+    (value: string, checked: boolean) =&gt; {
+      setFormData((prev) =&gt; {
+        const nextInterests = checked
+          ? Array.from(new Set([...prev.interests, value]))
+          : prev.interests.filter((v) =&gt; v !== value);
+        const next = { ...prev, interests: nextInterests };
+        if (engagementId) persistToStorage(engagementId, { interests: nextInterests });
+        return next;
+      });
+    },
+    [engagementId, persistToStorage]
+  );
+
+  // Reload saved form when engagement changes
+  useEffect(() =&gt; {
+    if (!engagementId) return;
+    setFormData(loadFromStorage(engagementId));
+  }, [engagementId, loadFromStorage]);
+
+  // Event listeners (only after config is ready)
+  useEffect(() =&gt; {
+    if (!config || typeof zoomSdk?.addEventListener !== &#34;function&#34;) return;
+
+    const onContextChange = (event: EngagementContextPayload) =&gt; {
+      try {
+        setEngagementId(event?.engagementContext?.engagementId ?? &#34;&#34;);
+        setEngagementContext(event?.engagementContext?.queueName ?? &#34;&#34;);
+      } catch (err) {
+        console.error(&#34;Error handling engagement context change:&#34;, err);
+      }
+    };
+
+    const onStatusChange = (event: EngagementStatusPayload) =&gt; {
+      try {
+        const state = event?.engagementStatus?.state ?? &#34;&#34;;
+        setEngagementStatus(state);
+        if (state === &#34;end&#34; &amp;&amp; engagementId) {
+          if (isBrowser) localStorage.removeItem(storageKey(engagementId));
+          setFormData(DEFAULT_FORM);
+        }
+      } catch (err) {
+        console.error(&#34;Error handling engagement status change:&#34;, err);
+      }
+    };
+
+    zoomSdk.addEventListener(&#34;onEngagementContextChange&#34;, onContextChange);
+    zoomSdk.addEventListener(&#34;onEngagementStatusChange&#34;, onStatusChange);
+
+    return () =&gt; {
+      zoomSdk.removeEventListener(&#34;onEngagementContextChange&#34;, onContextChange);
+      zoomSdk.removeEventListener(&#34;onEngagementStatusChange&#34;, onStatusChange);
+    };
+  }, [config, engagementId]);
+
+  return (
+    &lt;Card className=&#34;max-w-3xl mx-auto&#34;&gt;
+      &lt;CardHeader&gt;
+        &lt;CardTitle className=&#34;text-xl&#34;&gt;ZCC Engagement Notes&lt;/CardTitle&gt;
+      &lt;/CardHeader&gt;
+      &lt;CardContent className=&#34;space-y-6&#34;&gt;
+        &lt;div className=&#34;text-sm grid gap-1&#34;&gt;
+          &lt;div&gt;&lt;strong&gt;Engagement Id:&lt;/strong&gt; {engagementId || &#34;—&#34;}&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;Engagement Status:&lt;/strong&gt; {engagementStatus || &#34;—&#34;}&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;Engagement Context:&lt;/strong&gt; {engagementContext || &#34;—&#34;}&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div className=&#34;space-y-5&#34;&gt;
+          &lt;div className=&#34;grid gap-2&#34;&gt;
+            &lt;Label htmlFor=&#34;notes&#34;&gt;&lt;strong&gt;Text&lt;/strong&gt;&lt;/Label&gt;
+            &lt;Textarea
+              id=&#34;notes&#34;
+              value={formData.text}
+              onChange={(e) =&gt; handleChange(&#34;text&#34;, e.target.value)}
+              className=&#34;min-h-48&#34;
+              placeholder=&#34;Type notes...&#34;
+            /&gt;
+          &lt;/div&gt;
+
+          &lt;div className=&#34;grid gap-2&#34;&gt;
+            &lt;Label htmlFor=&#34;date&#34;&gt;&lt;strong&gt;Choose a Date&lt;/strong&gt;&lt;/Label&gt;
+            &lt;Input
+              id=&#34;date&#34;
+              type=&#34;date&#34;
+              value={formData.date}
+              onChange={(e) =&gt; handleChange(&#34;date&#34;, e.target.value)}
+              className=&#34;w-56&#34;
+            /&gt;
+          &lt;/div&gt;
+
+          &lt;div className=&#34;grid gap-2&#34;&gt;
+            &lt;Label&gt;&lt;strong&gt;Preferred Contact Method&lt;/strong&gt;&lt;/Label&gt;
+            &lt;RadioGroup
+              value={formData.contactMethod}
+              onValueChange={(v: &#34;email&#34; | &#34;phone&#34;) =&gt; handleChange(&#34;contactMethod&#34;, v)}
+              className=&#34;flex gap-6&#34;
+            &gt;
+              &lt;div className=&#34;flex items-center space-x-2&#34;&gt;
+                &lt;RadioGroupItem id=&#34;contact-email&#34; value=&#34;email&#34; /&gt;
+                &lt;Label htmlFor=&#34;contact-email&#34;&gt;Email&lt;/Label&gt;
+              &lt;/div&gt;
+              &lt;div className=&#34;flex items-center space-x-2&#34;&gt;
+                &lt;RadioGroupItem id=&#34;contact-phone&#34; value=&#34;phone&#34; /&gt;
+                &lt;Label htmlFor=&#34;contact-phone&#34;&gt;Phone&lt;/Label&gt;
+              &lt;/div&gt;
+            &lt;/RadioGroup&gt;
+          &lt;/div&gt;
+
+          &lt;div className=&#34;grid gap-2&#34;&gt;
+            &lt;Label&gt;&lt;strong&gt;Interests&lt;/strong&gt;&lt;/Label&gt;
+            &lt;div className=&#34;flex flex-wrap gap-6&#34;&gt;
+              {[&#34;coding&#34;, &#34;music&#34;, &#34;sports&#34;].map((opt) =&gt; {
+                const checked = formData.interests.includes(opt);
+                return (
+                  &lt;div key={opt} className=&#34;flex items-center space-x-2&#34;&gt;
+                    &lt;Checkbox
+                      id={`interest-${opt}`}
+                      checked={checked}
+                      onCheckedChange={(v) =&gt; handleCheckboxToggle(opt, Boolean(v))}
+                    /&gt;
+                    &lt;Label htmlFor={`interest-${opt}`} className=&#34;capitalize&#34;&gt;
+                      {opt}
+                    &lt;/Label&gt;
+                  &lt;/div&gt;
+                );
+              })}
+            &lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div className=&#34;grid gap-2&#34;&gt;
+            &lt;Label&gt;&lt;strong&gt;Set a Range&lt;/strong&gt; &lt;span className=&#34;opacity-70&#34;&gt;({formData.range})&lt;/span&gt;&lt;/Label&gt;
+            &lt;Slider
+              value={[formData.range]}
+              min={1}
+              max={100}
+              step={1}
+              onValueChange={(vals: number[]) =&gt; handleChange(&#34;range&#34;, vals[0] ?? 50)}
+              className=&#34;max-w-md&#34;
+            /&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/CardContent&gt;
+    &lt;/Card&gt;
+  );
+}
+
+
+</code></pre>
 
 
       </google-codelab-step>
